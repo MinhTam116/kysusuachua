@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Kỹ Sư Ma Sát - Vật Lí 10</title>
+    <style>
+        :root {
+            --primary: #2980b9;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --bg: #ecf0f1;
+            --tool-bg: #fff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* HEADER & ENGINEER INFO */
+        header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .engineer-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: #dfe6e9;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid var(--primary);
+            font-size: 30px;
+        }
+
+        .score-board {
+            text-align: right;
+        }
+
+        /* GAME AREA */
+        #game-stage {
+            width: 100%;
+            max-width: 800px;
+            height: 350px;
+            background: white;
+            border-radius: 15px;
+            border: 3px dashed #bdc3c7;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        #game-stage.drag-over {
+            border-color: var(--success);
+            background-color: #e8f8f5;
+        }
+
+        .scenario-title {
+            position: absolute;
+            top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            background: rgba(255,255,255,0.9);
+            padding: 5px 15px;
+            border-radius: 20px;
+            z-index: 10;
+        }
+
+        /* SCENE ELEMENTS (CSS DRAWINGS) */
+        .scene-object {
+            font-size: 100px; /* Emoji size */
+            transition: transform 0.3s;
+            cursor: pointer;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
+        }
+        
+        /* Animation cho các tình huống */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        
+        .needs-fixing {
+            animation: shake 0.5s;
+            animation-iteration-count: infinite;
+        }
+
+        .status-indicator {
+            margin-top: 10px;
+            color: #e74c3c;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        /* TOOLBOX */
+        .toolbox {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+        }
+
+        .tool {
+            width: 80px;
+            height: 80px;
+            background: var(--tool-bg);
+            border: 2px solid #bdc3c7;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .tool:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: var(--primary);
+        }
+
+        .tool:active { cursor: grabbing; }
+
+        .tool-icon { font-size: 35px; margin-bottom: 5px; }
+        .tool-name { font-size: 12px; font-weight: bold; color: #555; text-align: center; }
+
+        /* MODAL FEEDBACK */
+        #feedback-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .btn-next {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .btn-next:hover { background: #2980b9; }
+
+        /* PHẦN GIẢI THÍCH VẬT LÝ */
+        .physics-note {
+            background: #eaf2f8;
+            padding: 10px;
+            margin-top: 15px;
+            border-left: 4px solid var(--primary);
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        /* Ẩn hiện tool */
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="engineer-profile">
+            <div class="avatar">👷</div>
+            <div>
+                <h2 style="margin:0">Kỹ Sư Sửa Chữa</h2>
+                <small>Nhiệm vụ: Ứng dụng Lực Ma Sát</small>
+            </div>
+        </div>
+        <div class="score-board">
+            <div>Màn: <span id="level-display">1</span>/3</div>
+            <div style="font-size: 0.9rem; color: #7f8c8d;">Kéo dụng cụ vào vùng giữa</div>
+        </div>
+    </header>
+
+    <div id="game-stage" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div id="scenario-title" class="scenario-title">Đang tải...</div>
+        
+        <div id="target-object" class="scene-object"></div>
+        
+        <div id="status-text" class="status-indicator"></div>
+    </div>
+
+    <div class="toolbox">
+        <div class="tool" draggable="true" ondragstart="drag(event)" id="tool-oil" data-type="oil">
+            <div class="tool-icon">🛢️</div>
+            <div class="tool-name">Dầu Nhớt</div>
+        </div>
+        
+        <div class="tool" draggable="true" ondragstart="drag(event)" id="tool-sand" data-type="sand">
+            <div class="tool-icon">🏜️</div>
+            <div class="tool-name">Cát/Đá</div>
+        </div>
+        
+        <div class="tool" draggable="true" ondragstart="drag(event)" id="tool-roller" data-type="roller">
+            <div class="tool-icon">🛹</div>
+            <div class="tool-name">Con Lăn</div>
+        </div>
+
+        <div class="tool" draggable="true" ondragstart="drag(event)" id="tool-hammer" data-type="wrong">
+            <div class="tool-icon">🔨</div>
+            <div class="tool-name">Búa</div>
+        </div>
+    </div>
+
+    <div id="feedback-modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Kết Quả</h2>
+            <div id="modal-message"></div>
+            <div id="physics-explanation" class="physics-note"></div>
+            <button class="btn-next" onclick="nextLevel()">Tiếp tục</button>
+        </div>
+    </div>
+
+    <script>
+        // CẤU HÌNH DỮ LIỆU CÁC MÀN CHƠI
+        const scenarios = [
+            {
+                id: 1,
+                title: "Tình huống 1: Xích xe đạp bị rỉ sét, kêu rít",
+                objectIcon: "🚲",
+                statusText: "Âm thanh: KÉT... KÉT... (Ma sát quá lớn)",
+                correctTool: "oil",
+                animationClass: "needs-fixing",
+                successMsg: "Tuyệt vời! Xe chạy êm ru.",
+                explanation: "<strong>Tại sao?</strong> Dầu nhớt tạo ra một lớp màng ngăn cách giữa các bề mặt kim loại của xích và líp. Nó chuyển ma sát trượt khô thành ma sát ướt (nhớt), làm <strong>giảm hệ số ma sát</strong> đáng kể."
+            },
+            {
+                id: 2,
+                title: "Tình huống 2: Đường trơn trượt sau mưa",
+                objectIcon: "🛣️",
+                statusText: "Nguy hiểm! Xe dễ bị trượt ngã (Ma sát quá nhỏ)",
+                correctTool: "sand",
+                animationClass: "", // Không rung, chỉ hiển thị tĩnh
+                successMsg: "Đã xử lý! Đường bám tốt hơn.",
+                explanation: "<strong>Tại sao?</strong> Rắc cát hoặc đá dăm giúp tăng độ nhám của bề mặt đường. Việc này làm <strong>tăng lực ma sát nghỉ</strong> và ma sát trượt, giúp lốp xe bám đường tốt hơn, tránh tai nạn."
+            },
+            {
+                id: 3,
+                title: "Tình huống 3: Di chuyển tủ gỗ rất nặng",
+                objectIcon: "📦", // Dùng icon box đại diện tủ
+                statusText: "Nặng quá! Đẩy không nhúc nhích.",
+                correctTool: "roller",
+                animationClass: "",
+                successMsg: "Thông minh! Đẩy nhẹ nhàng.",
+                explanation: "<strong>Tại sao?</strong> Khi đặt con lăn xuống dưới, ta đã chuyển từ ma sát trượt sang <strong>ma sát lăn</strong>. Lực ma sát lăn có độ lớn nhỏ hơn rất nhiều so với ma sát trượt, giúp di chuyển vật nặng dễ dàng."
+            }
+        ];
+
+        let currentLevel = 0;
+        const stage = document.getElementById('game-stage');
+        const titleEl = document.getElementById('scenario-title');
+        const objectEl = document.getElementById('target-object');
+        const statusEl = document.getElementById('status-text');
+        const modal = document.getElementById('feedback-modal');
+
+        // KHỞI TẠO
+        function initGame() {
+            loadLevel(0);
+        }
+
+        function loadLevel(index) {
+            if (index >= scenarios.length) {
+                finishGame();
+                return;
+            }
+            
+            const data = scenarios[index];
+            document.getElementById('level-display').innerText = index + 1;
+            
+            titleEl.innerText = data.title;
+            objectEl.innerText = data.objectIcon;
+            statusEl.innerText = data.statusText;
+            
+            // Reset animation
+            objectEl.className = "scene-object " + (data.animationClass || "");
+            objectEl.style.transform = "none";
+        }
+
+        // DRAG & DROP LOGIC
+        function allowDrop(ev) {
+            ev.preventDefault();
+            stage.classList.add('drag-over');
+        }
+
+        function drag(ev) {
+            // Gửi ID loại dụng cụ
+            ev.dataTransfer.setData("toolType", ev.target.getAttribute('data-type'));
+            stage.classList.remove('drag-over');
+        }
+
+        /* Xử lý khi kéo ra ngoài vùng thả để tắt hiệu ứng border */
+        stage.addEventListener('dragleave', () => {
+            stage.classList.remove('drag-over');
+        });
+
+        function drop(ev) {
+            ev.preventDefault();
+            stage.classList.remove('drag-over');
+            
+            const toolType = ev.dataTransfer.getData("toolType");
+            checkResult(toolType);
+        }
+
+        // KIỂM TRA KẾT QUẢ
+        function checkResult(toolType) {
+            const currentData = scenarios[currentLevel];
+
+            if (toolType === currentData.correctTool) {
+                // ĐÚNG
+                showFeedback(true, currentData);
+            } else {
+                // SAI
+                showFeedback(false, null);
+            }
+        }
+
+        function showFeedback(isSuccess, data) {
+            modal.style.display = "flex";
+            const mTitle = document.getElementById('modal-title');
+            const mMsg = document.getElementById('modal-message');
+            const mExp = document.getElementById('physics-explanation');
+            const btn = document.querySelector('.btn-next');
+
+            if (isSuccess) {
+                mTitle.innerText = "CHÍNH XÁC! 🎉";
+                mTitle.style.color = "#27ae60";
+                mMsg.innerText = data.successMsg;
+                mExp.innerHTML = data.explanation;
+                mExp.style.display = "block";
+                
+                // Hiệu ứng trên màn hình game
+                objectEl.className = "scene-object"; // Bỏ rung lắc
+                objectEl.style.transform = "scale(1.2)"; // Phóng to nhẹ báo hiệu thành công
+                statusEl.innerText = "Đã khắc phục xong!";
+                statusEl.style.color = "#27ae60";
+
+                btn.innerText = "Màn tiếp theo";
+                btn.onclick = nextLevel;
+            } else {
+                mTitle.innerText = "CHƯA ĐÚNG! 😅";
+                mTitle.style.color = "#c0392b";
+                mMsg.innerText = "Dụng cụ này không phù hợp với tình huống. Hãy thử lại xem!";
+                mExp.style.display = "none";
+                
+                btn.innerText = "Thử lại";
+                btn.onclick = closeModal;
+            }
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+
+        function nextLevel() {
+            closeModal();
+            currentLevel++;
+            loadLevel(currentLevel);
+        }
+
+        function finishGame() {
+            stage.innerHTML = "<h1>🏆 CHÚC MỪNG!</h1><p>Bạn đã hoàn thành xuất sắc khóa huấn luyện Kỹ Sư Ma Sát.</p>";
+            document.querySelector('.toolbox').style.display = 'none';
+        }
+
+        // Chạy game
+        initGame();
+
+    </script>
+</body>
+</html>
